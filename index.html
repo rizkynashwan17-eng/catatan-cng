@@ -226,6 +226,32 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
 .vname { font-weight: 700; font-size: 14px; overflow-wrap: anywhere; }
 .vsub { font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }
 
+/* Konsumsi */
+.acc { background: var(--surface); border-radius: 22px; overflow: hidden; }
+.acchead { padding: 14px; display: flex; flex-direction: column; gap: 10px; cursor: pointer; }
+.acctop { display: flex; align-items: center; gap: 10px; }
+.acctop .t1 { flex: 1; font-weight: 700; font-size: 14px; }
+.chev { transition: transform .2s; color: var(--muted); display: grid; }
+.acc.open .chev { transform: rotate(180deg); }
+.big { font-size: 16.5px; font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.big small { font-size: 11.5px; font-weight: 500; color: var(--muted); }
+.mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mini div { background: var(--card); border-radius: 14px; padding: 8px 10px; min-width: 0; }
+.mini b { display: block; font-size: 13px; font-variant-numeric: tabular-nums; }
+.mini span { font-size: 11px; color: var(--muted); }
+.klist { display: none; border-top: 1px solid var(--line); padding: 12px 14px 14px; flex-direction: column; gap: 12px; }
+.acc.open .klist { display: flex; }
+.kit { display: flex; flex-direction: column; gap: 3px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.kit:last-child { border: 0; padding-bottom: 0; }
+.kit .a { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; }
+.kit .m { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--muted); flex-wrap: wrap; }
+.tag.lt { background: var(--blue-soft); color: var(--blue); }
+.lit { color: var(--blue); font-weight: 800; }
+.khero { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.khero .b { font-size: clamp(18px, 5.4vw, 23px); font-weight: 800; letter-spacing: -.02em; margin-top: 4px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.khero .b small { font-size: 12px; font-weight: 600; color: var(--hero-mute); }
+.hint { font-size: 11.5px; color: var(--muted); }
+.fline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .nav { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px; display: flex; gap: 2px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); z-index: 15; max-width: calc(100% - 24px); }
 .nav-i { height: 42px; min-width: 42px; padding: 0 12px; border-radius: 999px; border: 0; background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; font-size: 13px; cursor: pointer; }
 .nav-i.on { background: var(--ink); color: var(--bg); padding: 0 14px; }
@@ -275,6 +301,11 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
           <div class="field">
             <label for="fJumlah">Jumlah</label>
             <div class="amt"><span>Rp</span><input type="text" id="fJumlah" inputmode="numeric" placeholder="0" required></div>
+          </div>
+          <div class="field" id="litField" hidden>
+            <label for="fLiter">Liter solar (opsional)</label>
+            <input type="text" id="fLiter" inputmode="decimal" placeholder="Contoh: 150">
+            <span class="hint" id="litHint"></span>
           </div>
           <div class="field">
             <span class="lb" id="lbKat">Kategori</span>
@@ -326,6 +357,17 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     </div>
     <div class="sumline" id="sumline"></div>
     <div class="stack" id="hist"></div>
+  </section>
+
+  <section class="view" id="v-konsumsi" aria-label="Konsumsi" hidden>
+    <div class="page-head">
+      <h1>Konsumsi</h1>
+      <p>Pemakaian solar dan biaya operasional. Ketuk kartu untuk melihat daftarnya.</p>
+    </div>
+    <div class="notice" id="litNote" hidden>Kolom liter belum aktif. Jalankan update-konsumsi.sql di SQL Editor Supabase satu kali, lalu muat ulang halaman ini.</div>
+    <div class="fline"><div class="field" style="min-width:140px"><label for="kBulan" class="sr" style="position:absolute;left:-9999px">Periode</label><select class="sel" id="kBulan"></select></div></div>
+    <div class="chips" id="kMob" role="group" aria-label="Pilih mobil"></div>
+    <div id="kBody" class="view"></div>
   </section>
 
   <section class="view" id="v-laporan" aria-label="Laporan" hidden>
@@ -392,8 +434,8 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   var BASE_KAT = ['Solar', 'Operasional Sopir', 'Tol', 'Gaji', 'Transportasi Sopir'];
   var DEFAULT_VEH = ['Nissan', 'Quester'];
   var BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-  var VIEWS = ['beranda', 'catat', 'riwayat', 'laporan', 'mobil'];
-  var NAV = [['beranda', 'home', 'Beranda'], ['catat', 'plus', 'Catat'], ['riwayat', 'list', 'Riwayat'], ['laporan', 'file', 'Laporan'], ['mobil', 'truck', 'Mobil']];
+  var VIEWS = ['beranda', 'catat', 'riwayat', 'konsumsi', 'laporan', 'mobil'];
+  var NAV = [['beranda', 'home', 'Beranda'], ['catat', 'plus', 'Catat'], ['riwayat', 'list', 'Riwayat'], ['konsumsi', 'drop', 'Konsumsi'], ['laporan', 'file', 'Laporan'], ['mobil', 'truck', 'Mobil']];
   var PRESETS = [['bulan', 'Bulan ini'], ['lalu', 'Bulan lalu'], ['7', '7 hari'], ['30', '30 hari'], ['semua', 'Semua']];
   var SECTIONS = [['ringkas', 'Ringkasan'], ['mobil', 'Rincian per mobil'], ['semua', 'Semua catatan']];
   var ICONS = {
@@ -402,6 +444,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     list: '<path d="M8 6.5h12M8 12h12M8 17.5h12"/><path d="M4 6.5h.01M4 12h.01M4 17.5h.01"/>',
     file: '<path d="M6.5 3.5h7.5l4 4v13h-11.5z"/><path d="M14 3.5V8h4"/><path d="M9.5 13h5M9.5 16.5h5"/>',
     truck: '<path d="M2.5 6.5h10.5v9.5H2.5z"/><path d="M13 10h4l3.5 3.5V16H13z"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>',
+    drop: '<path d="M12 3.5s6 6.2 6 10.3a6 6 0 0 1-12 0C6 9.7 12 3.5 12 3.5z"/>',
     wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10.5h18"/><path d="M16.5 14.5h.01"/>',
     eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
     eyeoff: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M3 3l18 18"/>',
@@ -437,12 +480,15 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     var last = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0).getDate();
     return [m + '-01', m + '-' + pad(last)];
   }
+  function fmtL(n) { return String(Math.round((Number(n) || 0) * 100) / 100).replace('.', ','); }
+  function parseL(s) { var n = Number(String(s || '').replace(/\s/g, '').replace(',', '.')); return n > 0 && isFinite(n) ? Math.round(n * 100) / 100 : 0; }
   function cleanName(s) { return String(s || '').replace(/\s+/g, ' ').trim().slice(0, 30); }
   function kendOf(r) { var k = String(r.kendaraan == null ? '' : r.kendaraan).trim(); return k || 'Umum'; }
   function kLabel(k) { return k === 'Umum' ? 'Umum (semua mobil)' : k; }
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 
+  var literOk = null, kons = { bulan: todayStr().slice(0, 7), kend: '' }, konsOpen = { s: true, o: false };
   var rows = [], vehicles = [], vehTable = false, rowsSig = '', loaded = false, vnCache = null;
   var password = lsGet('pw') || '';
   var view = 'beranda';
@@ -516,8 +562,14 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       throw err;
     });
   }
+  function checkLiter() {
+    if (literOk !== null) return Promise.resolve();
+    return api('pengeluaran?select=liter&limit=1').then(function () { literOk = true; }).catch(function (err) {
+      if (err && (err.status === 400 || err.status === 404)) literOk = false;
+    });
+  }
   function refresh(silent) {
-    return Promise.all([fetchAll(), fetchVeh()]).then(function (res) {
+    return checkLiter().then(function () { return Promise.all([fetchAll(), fetchVeh()]); }).then(function (res) {
       var list = res[0], veh = res[1];
       var sig = JSON.stringify([list, veh]);
       var first = !loaded;
@@ -568,7 +620,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     password = '';
     lsSet('pw', '');
     clearInterval(pollTimer);
-    loaded = false; rows = []; vehicles = []; rowsSig = ''; vnCache = null;
+    loaded = false; literOk = null; rows = []; vehicles = []; rowsSig = ''; vnCache = null;
     showGate(msg || '');
   }
   function start() {
@@ -715,7 +767,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     var k = kendOf(r);
     var h = '<article class="item"><div class="item-top"><div class="item-title">' + esc(r.keterangan || '') + '</div>' +
       '<div class="item-amt">' + (masked ? mny(r.jumlah) : rp(r.jumlah)) + '</div></div>' +
-      '<div class="item-meta"><span class="tag v ' + kcls(k) + '">' + esc(k) + '</span><span class="tag">' + esc(r.kategori || 'Dll') + '</span></div>' +
+      '<div class="item-meta"><span class="tag v ' + kcls(k) + '">' + esc(k) + '</span><span class="tag">' + esc(r.kategori || 'Dll') + '</span>' + (Number(r.liter) > 0 ? '<span class="tag lt">' + fmtL(r.liter) + ' L</span>' : '') + '</div>' +
       '<div class="item-foot"><span>' + esc(fmtDate(r.tanggal)) + (r.lokasi ? ' · ' + esc(r.lokasi) : '') + '</span>' + (actions ? '<span>oleh ' + esc(r.oleh || '-') + '</span>' : '') + '</div>';
     if (actions) {
       h += '<div class="item-acts">';
@@ -848,6 +900,19 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     h += '<button type="button" class="chipbtn' + (formKat === '__dll' ? ' on' : '') + '" data-seg="kat" data-v="__dll" aria-pressed="' + (formKat === '__dll') + '">Dll</button>';
     $('chipKat').innerHTML = h;
     $('katCustom').hidden = formKat !== '__dll';
+    syncLit();
+  }
+  function syncLit() {
+    var show = formKat === 'Solar';
+    $('litField').hidden = !show;
+    $('fLiter').disabled = literOk === false;
+    updLitHint();
+  }
+  function updLitHint() {
+    var h = $('litHint');
+    if (literOk === false) { h.textContent = 'Belum aktif. Jalankan update-konsumsi.sql di Supabase dulu.'; return; }
+    var l = parseL($('fLiter').value), j = parseAmt($('fJumlah').value);
+    h.textContent = l && j ? 'Sekitar ' + rp(j / l) + ' per liter. Rupiah tetap sesuai yang kamu isi.' : 'Isi kalau tahu berapa liter. Rupiah tidak berubah.';
   }
   function resetForm() {
     editingId = null;
@@ -855,6 +920,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     $('fJumlah').value = '';
     $('fLokasi').value = '';
     $('fKatCustom').value = '';
+    $('fLiter').value = '';
     $('fTanggal').value = todayStr();
     $('formTitle').textContent = 'Catat pengeluaran';
     $('btnSave').textContent = 'Simpan pengeluaran';
@@ -917,6 +983,65 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     $('btnCsv').disabled = !list.length;
   }
 
+  /* ---------- Konsumsi ---------- */
+  function kItem(r, solar) {
+    var k = kendOf(r);
+    return '<div class="kit"><div class="a"><span>' + esc(r.keterangan || '') + '</span><span>' + rp(r.jumlah) + '</span></div>' +
+      '<div class="m"><span>' + esc(fmtDate(r.tanggal)) + ' \u00B7 <span class="tag v ' + kcls(k) + '">' + esc(k) + '</span> <span class="tag">' + esc(r.kategori || 'Dll') + '</span></span>' +
+      (solar ? (Number(r.liter) > 0 ? '<span class="lit">' + fmtL(r.liter) + ' L \u00B7 ' + rp(r.jumlah / r.liter) + '/L</span>' : '<span>liter belum diisi</span>') : '') + '</div></div>';
+  }
+  function renderKonsumsi() {
+    var months = monthsList();
+    if (kons.bulan && months.indexOf(kons.bulan) === -1) kons.bulan = '';
+    $('kBulan').innerHTML = '<option value="">Semua waktu</option>' + months.map(function (m) {
+      return '<option value="' + m + '"' + (kons.bulan === m ? ' selected' : '') + '>' + esc(monthShort(m)) + '</option>';
+    }).join('');
+    $('litNote').hidden = literOk !== false;
+    var names = VN();
+    if (kons.kend && names.indexOf(kons.kend) === -1) kons.kend = '';
+    $('kMob').innerHTML = [''].concat(names).map(function (n) {
+      return '<button type="button" class="chipbtn' + (kons.kend === n ? ' on' : '') + '" data-act="kmob" data-v="' + esc(n) + '" aria-pressed="' + (kons.kend === n) + '">' + esc(n || 'Semua') + '</button>';
+    }).join('');
+
+    var list = sortRows(rows.filter(function (r) {
+      if (kons.bulan && String(r.tanggal || '').slice(0, 7) !== kons.bulan) return false;
+      if (kons.kend && kendOf(r) !== kons.kend) return false;
+      return true;
+    }));
+    var S = list.filter(function (r) { return r.kategori === 'Solar'; });
+    var O = list.filter(function (r) { return r.kategori !== 'Solar'; });
+    var SL = S.filter(function (r) { return Number(r.liter) > 0; });
+    var sum = function (a, k) { return a.reduce(function (t, r) { return t + (Number(r[k]) || 0); }, 0); };
+    var SR = sum(S, 'jumlah'), OR = sum(O, 'jumlah'), L = sum(SL, 'liter'), SLR = sum(SL, 'jumlah');
+    var last = SL[0];
+
+    var h = '<div class="hero"><div class="khero"><div><div class="lbl">Solar (rupiah)</div><div class="b">' + rp(SR) + '</div><div class="hsub">' + S.length + ' catatan</div></div>' +
+      '<div><div class="lbl">Liter tercatat</div><div class="b">' + fmtL(L) + ' <small>L</small></div><div class="hsub">' + (L ? rp(SLR / L) + ' per liter' : 'belum ada liter') + '</div></div></div>' +
+      '<div class="hsub" style="margin-top:-6px">Operasional ' + rp(OR) + ' \u00B7 ' + O.length + ' catatan</div></div>';
+
+    var perMob = (kons.kend ? [kons.kend] : names).map(function (n) {
+      var x = SL.filter(function (r) { return kendOf(r) === n; });
+      var all = S.filter(function (r) { return kendOf(r) === n; });
+      return '<div><span>' + esc(n) + '</span><b>' + fmtL(sum(x, 'liter')) + ' L</b><span>' + rp(sum(all, 'jumlah')) + '</span></div>';
+    }).join('');
+    h += '<div class="acc c-0' + (konsOpen.s ? ' open' : '') + '"><div class="acchead" role="button" tabindex="0" aria-expanded="' + konsOpen.s + '" data-act="kacc" data-v="s">' +
+      '<div class="acctop"><span class="wico">' + ico('drop', 16) + '</span><span class="t1">Solar</span><span class="chev">' + ico('chev', 18) + '</span></div>' +
+      '<div class="big">' + (L ? fmtL(L) + ' L ' : '') + '<small>' + (L ? '\u00B7 ' : '') + rp(SR) + '</small></div>' +
+      (last ? '<div class="sub">Isi terakhir: <b>' + fmtL(last.liter) + ' L</b> \u00B7 ' + esc(fmtDate(last.tanggal)) + ' \u00B7 ' + esc(kendOf(last)) + '</div>' : '<div class="sub">Belum ada catatan solar yang diisi liternya.</div>') +
+      (S.length > SL.length && SL.length ? '<div class="sub">' + (S.length - SL.length) + ' dari ' + S.length + ' catatan belum diisi liternya.</div>' : '') +
+      (perMob ? '<div class="mini">' + perMob + '</div>' : '') + '</div>' +
+      '<div class="klist">' + (S.map(function (r) { return kItem(r, true); }).join('') || '<div class="sub">Belum ada catatan solar.</div>') + '</div></div>';
+
+    h += '<div class="acc c-1' + (konsOpen.o ? ' open' : '') + '"><div class="acchead" role="button" tabindex="0" aria-expanded="' + konsOpen.o + '" data-act="kacc" data-v="o">' +
+      '<div class="acctop"><span class="wico">' + ico('wallet', 16) + '</span><span class="t1">Operasional</span><span class="chev">' + ico('chev', 18) + '</span></div>' +
+      '<div class="big">' + rp(OR) + ' <small>\u00B7 ' + O.length + ' catatan</small></div>' +
+      (O.length ? barsHtml(sumBy(O, function (r) { return r.kategori || 'Tanpa kategori'; }), false) : '') + '</div>' +
+      '<div class="klist">' + (O.map(function (r) { return kItem(r, false); }).join('') || '<div class="sub">Belum ada catatan.</div>') + '</div></div>';
+    h += '<p class="hint" style="text-align:center;margin:0">Operasional mencakup semua kategori selain Solar.</p>';
+    if (!loaded) h = '<div class="empty"><b>Memuat catatan bersama</b>Sebentar, data sedang diambil.</div>';
+    $('kBody').innerHTML = h;
+  }
+
   /* ---------- Mobil ---------- */
   function renderMobil() {
     var list = vehList(), canEdit = vehTable;
@@ -961,6 +1086,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     renderKend();
     renderKat();
     renderReport();
+    renderKonsumsi();
     renderMobil();
     if (keep && $('rnInput')) {
       var el = $('rnInput');
@@ -998,10 +1124,10 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   }
   function exportCsv(list) {
     if (!list.length) { toast('Belum ada catatan untuk diunduh.'); return; }
-    var lines = [['Tanggal', 'Mobil', 'Kategori', 'Keterangan', 'Lokasi', 'Dicatat oleh', 'Jumlah (Rp)'].join(';')];
+    var lines = [['Tanggal', 'Mobil', 'Kategori', 'Keterangan', 'Lokasi', 'Dicatat oleh', 'Liter', 'Jumlah (Rp)'].join(';')];
     list.slice().reverse().forEach(function (r) {
       lines.push([
-        csvCell(r.tanggal), csvCell(kendOf(r)), csvCell(r.kategori), csvCell(r.keterangan), csvCell(r.lokasi), csvCell(r.oleh),
+        csvCell(r.tanggal), csvCell(kendOf(r)), csvCell(r.kategori), csvCell(r.keterangan), csvCell(r.lokasi), csvCell(r.oleh), Number(r.liter) > 0 ? String(r.liter).replace('.', ',') : '',
         Math.round(Number(r.jumlah) || 0)
       ].join(';'));
     });
@@ -1123,6 +1249,8 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     }
     if (act === 'pdf') { downloadPdf(); return; }
     if (act === 'csv') { exportCsv(reportRows()); return; }
+    if (act === 'kacc') { var kv = b.getAttribute('data-v'); konsOpen[kv] = !konsOpen[kv]; renderKonsumsi(); return; }
+    if (act === 'kmob') { kons.kend = b.getAttribute('data-v'); renderKonsumsi(); return; }
     if (act === 'wkend') {
       filt = { bulan: period, kend: b.getAttribute('data-k'), kat: '', oleh: '', q: '' };
       $('fCari').value = '';
@@ -1181,6 +1309,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       $('fJumlah').value = fmtNum(r.jumlah);
       $('fKet').value = r.keterangan || '';
       $('fLokasi').value = r.lokasi || '';
+      $('fLiter').value = Number(r.liter) > 0 ? fmtL(r.liter) : '';
       $('fOleh').value = r.oleh || '';
       $('formTitle').textContent = 'Ubah catatan';
       $('btnSave').textContent = 'Simpan perubahan';
@@ -1192,6 +1321,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
 
   document.addEventListener('change', function (e) {
     var id = e.target.id;
+    if (id === 'kBulan') { kons.bulan = e.target.value; renderKonsumsi(); return; }
     if (id === 'selPeriode') { period = e.target.value; renderHome(); return; }
     if (id === 'fBulan' || id === 'fKend' || id === 'fKat' || id === 'fOrang') {
       filt.bulan = $('fBulan').value;
@@ -1214,8 +1344,11 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   });
   document.addEventListener('input', function (e) {
     if (e.target.id === 'rnInput') renameValue = e.target.value;
+    if (e.target.id === 'fLiter') updLitHint();
   });
   document.addEventListener('keydown', function (e) {
+    var kb = e.target.closest && e.target.closest('[data-act="kacc"]');
+    if (kb && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); kb.click(); return; }
     if (e.target.id !== 'rnInput') return;
     if (e.key === 'Enter') { e.preventDefault(); saveRename(); }
     else if (e.key === 'Escape') { renameFor = null; renderMobil(); }
@@ -1224,6 +1357,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   $('fJumlah').addEventListener('input', function () {
     var n = parseAmt(this.value);
     this.value = n ? fmtNum(n) : '';
+    updLitHint();
   });
   $('btnCancel').addEventListener('click', function () {
     var wasEditing = !!editingId;
@@ -1245,6 +1379,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       oleh: $('fOleh').value.trim(),
       jumlah: parseAmt($('fJumlah').value)
     };
+    if (literOk) data.liter = kat === 'Solar' && parseL($('fLiter').value) ? parseL($('fLiter').value) : null;
     if (!data.tanggal || !data.keterangan || !data.oleh || !(data.jumlah > 0)) {
       toast('Lengkapi jumlah, keterangan, tanggal, dan nama.');
       return;

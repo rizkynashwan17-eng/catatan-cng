@@ -89,3 +89,9 @@ grant execute on function public.ganti_nama_mobil(text, text) to anon, authentic
 
 -- Supaya perubahan langsung terbaca oleh aplikasi
 notify pgrst, 'reload schema';
+
+-- ===== Kolom liter untuk solar =====
+alter table public.pengeluaran
+  add column if not exists liter numeric(10,2) check (liter is null or liter > 0);
+
+notify pgrst, 'reload schema';
