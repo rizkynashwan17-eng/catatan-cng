@@ -252,9 +252,28 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
 .khero .b small { font-size: 12px; font-weight: 600; color: var(--hero-mute); }
 .hint { font-size: 11.5px; color: var(--muted); }
 .fline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+/* Tracker */
+.prog { display: flex; flex-direction: column; gap: 9px; }
+.prog .r { display: grid; grid-template-columns: 54px 1fr auto; gap: 10px; align-items: center; font-size: 12px; }
+.prog .bar { height: 7px; background: #2A2C31; border-radius: 4px; overflow: hidden; }
+.prog i { display: block; height: 100%; border-radius: 4px; transition: width .2s; }
+.prog b { font-variant-numeric: tabular-nums; }
+.trip { background: var(--surface); border-radius: 18px; padding: 10px 12px; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; border: 1.5px solid transparent; }
+.trip.done { border-color: var(--green); }
+.tno { width: 34px; height: 34px; border-radius: 11px; background: var(--card); display: grid; place-items: center; font-weight: 800; font-size: 13px; }
+.trip.done .tno { background: var(--green); color: var(--bg); }
+.tg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; min-width: 0; }
+.tk { height: 38px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card); font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; color: var(--muted); cursor: pointer; min-width: 0; }
+.tk .ck { width: 15px; height: 15px; border-radius: 5px; border: 1.5px solid currentColor; display: grid; place-items: center; flex: none; }
+.tk .ck svg { display: none; }
+.tk.on .ck { background: currentColor; }
+.tk.on .ck svg { display: block; stroke: var(--surface); }
+.tk.on.s { background: var(--blue-soft); color: var(--blue); border-color: var(--blue); }
+.tk.on.o { background: var(--amber-soft); color: var(--amber); border-color: var(--amber); }
+.tk.on.t { background: var(--violet-soft); color: var(--violet); border-color: var(--violet); }
 .nav { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px; display: flex; gap: 2px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); z-index: 15; max-width: calc(100% - 24px); }
-.nav-i { height: 42px; min-width: 42px; padding: 0 12px; border-radius: 999px; border: 0; background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; font-size: 13px; cursor: pointer; }
-.nav-i.on { background: var(--ink); color: var(--bg); padding: 0 14px; }
+.nav-i { height: 42px; min-width: 40px; padding: 0 9px; border-radius: 999px; border: 0; background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; font-size: 12px; cursor: pointer; }
+.nav-i.on { background: var(--ink); color: var(--bg); padding: 0 12px; }
 
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: 12px; max-width: calc(100% - 32px); z-index: 20; text-align: center; }
 
@@ -370,6 +389,17 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     <div id="kBody" class="view"></div>
   </section>
 
+  <section class="view" id="v-tracker" aria-label="Tracker trip" hidden>
+    <div class="page-head">
+      <h1>Tracker trip</h1>
+      <p>Centang Solar, Ops, dan Tol tiap trip. Hanya untuk melacak, tidak mengubah catatan pengeluaran.</p>
+    </div>
+    <div class="notice" id="tNote" hidden>Tracker belum aktif. Jalankan file update-tracker.sql di SQL Editor Supabase satu kali, lalu muat ulang halaman ini.</div>
+    <div class="fline"><div class="field" style="min-width:150px"><select class="sel" id="tBulan" aria-label="Bulan"></select></div></div>
+    <div class="chips" id="tMob" role="group" aria-label="Pilih mobil"></div>
+    <div id="tBody" class="view"></div>
+  </section>
+
   <section class="view" id="v-laporan" aria-label="Laporan" hidden>
     <div class="page-head">
       <h1>Laporan</h1>
@@ -434,8 +464,8 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   var BASE_KAT = ['Solar', 'Operasional Sopir', 'Tol', 'Gaji', 'Transportasi Sopir'];
   var DEFAULT_VEH = ['Nissan', 'Quester'];
   var BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-  var VIEWS = ['beranda', 'catat', 'riwayat', 'konsumsi', 'laporan', 'mobil'];
-  var NAV = [['beranda', 'home', 'Beranda'], ['catat', 'plus', 'Catat'], ['riwayat', 'list', 'Riwayat'], ['konsumsi', 'drop', 'Konsumsi'], ['laporan', 'file', 'Laporan'], ['mobil', 'truck', 'Mobil']];
+  var VIEWS = ['beranda', 'catat', 'riwayat', 'konsumsi', 'tracker', 'laporan', 'mobil'];
+  var NAV = [['beranda', 'home', 'Beranda'], ['catat', 'plus', 'Catat'], ['riwayat', 'list', 'Riwayat'], ['konsumsi', 'drop', 'Konsumsi'], ['tracker', 'check', 'Tracker'], ['laporan', 'file', 'Laporan']];
   var PRESETS = [['bulan', 'Bulan ini'], ['lalu', 'Bulan lalu'], ['7', '7 hari'], ['30', '30 hari'], ['semua', 'Semua']];
   var SECTIONS = [['ringkas', 'Ringkasan'], ['mobil', 'Rincian per mobil'], ['semua', 'Semua catatan']];
   var ICONS = {
@@ -444,6 +474,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     list: '<path d="M8 6.5h12M8 12h12M8 17.5h12"/><path d="M4 6.5h.01M4 12h.01M4 17.5h.01"/>',
     file: '<path d="M6.5 3.5h7.5l4 4v13h-11.5z"/><path d="M14 3.5V8h4"/><path d="M9.5 13h5M9.5 16.5h5"/>',
     truck: '<path d="M2.5 6.5h10.5v9.5H2.5z"/><path d="M13 10h4l3.5 3.5V16H13z"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>',
+    check: '<rect x="5" y="4.5" width="14" height="16" rx="2.5"/><path d="M9 4.5h6M9 13l2.2 2.2L15.5 11"/>',
     drop: '<path d="M12 3.5s6 6.2 6 10.3a6 6 0 0 1-12 0C6 9.7 12 3.5 12 3.5z"/>',
     wallet: '<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10.5h18"/><path d="M16.5 14.5h.01"/>',
     eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
@@ -489,6 +520,8 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 
   var literOk = null, kons = { bulan: todayStr().slice(0, 7), kend: '' }, konsOpen = { s: true, o: false };
+  var TRIPS = 15, TK = [['solar', 'Solar', 's'], ['ops', 'Ops', 'o'], ['tol', 'Tol', 't']];
+  var trk = {}, trkOk = true, trkPending = 0, trkConfirm = false, trkSel = { bulan: todayStr().slice(0, 7), kend: '' };
   var rows = [], vehicles = [], vehTable = false, rowsSig = '', loaded = false, vnCache = null;
   var password = lsGet('pw') || '';
   var view = 'beranda';
@@ -562,6 +595,18 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       throw err;
     });
   }
+  function trkKey(b, k, n) { return b + '|' + k + '|' + n; }
+  function fetchTrk() {
+    return api('trip_tracker?select=*&limit=5000').catch(function (err) {
+      if (err && err.status === 404) return null;
+      throw err;
+    });
+  }
+  function indexTrk(list) {
+    var m = {};
+    list.forEach(function (r) { m[trkKey(r.bulan, r.kendaraan, r.trip)] = { solar: !!r.solar, ops: !!r.ops, tol: !!r.tol }; });
+    return m;
+  }
   function checkLiter() {
     if (literOk !== null) return Promise.resolve();
     return api('pengeluaran?select=liter&limit=1').then(function () { literOk = true; }).catch(function (err) {
@@ -569,14 +614,16 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     });
   }
   function refresh(silent) {
-    return checkLiter().then(function () { return Promise.all([fetchAll(), fetchVeh()]); }).then(function (res) {
-      var list = res[0], veh = res[1];
-      var sig = JSON.stringify([list, veh]);
+    if (trkPending > 0) return Promise.resolve();
+    return checkLiter().then(function () { return Promise.all([fetchAll(), fetchVeh(), fetchTrk()]); }).then(function (res) {
+      var list = res[0], veh = res[1], tr = res[2];
+      var sig = JSON.stringify([list, veh, tr]);
       var first = !loaded;
       loaded = true;
       setNote('');
       if (sig !== rowsSig || first) {
         rowsSig = sig; rows = list; vehTable = veh !== null; vehicles = veh || []; vnCache = null;
+        trkOk = tr !== null; trk = indexTrk(tr || []);
         renderAll();
       }
     }).catch(function (err) { onApiError(err, silent); });
@@ -620,7 +667,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     password = '';
     lsSet('pw', '');
     clearInterval(pollTimer);
-    loaded = false; literOk = null; rows = []; vehicles = []; rowsSig = ''; vnCache = null;
+    loaded = false; literOk = null; trk = {}; rows = []; vehicles = []; rowsSig = ''; vnCache = null;
     showGate(msg || '');
   }
   function start() {
@@ -1042,6 +1089,69 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     $('kBody').innerHTML = h;
   }
 
+  /* ---------- Tracker ---------- */
+  function trkMonths() {
+    var now = new Date(), out = [];
+    for (var i = 1; i >= -11; i--) {
+      var d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      out.push(d.getFullYear() + '-' + pad(d.getMonth() + 1));
+    }
+    return out;
+  }
+  function renderTracker() {
+    var names = VN();
+    if (!trkSel.kend || names.indexOf(trkSel.kend) === -1) trkSel.kend = names[0] || '';
+    $('tNote').hidden = trkOk;
+    $('tBulan').innerHTML = trkMonths().map(function (m) {
+      return '<option value="' + m + '"' + (trkSel.bulan === m ? ' selected' : '') + '>' + esc(monthShort(m)) + '</option>';
+    }).join('');
+    $('tMob').innerHTML = names.map(function (n) {
+      return '<button type="button" class="chipbtn' + (trkSel.kend === n ? ' on' : '') + '" data-act="tkmob" data-v="' + esc(n) + '" aria-pressed="' + (trkSel.kend === n) + '">' + esc(n) + '</button>';
+    }).join('');
+    if (!trkSel.kend) { $('tBody').innerHTML = '<div class="empty"><b>Belum ada mobil</b>Tambahkan mobil di menu Mobil dulu.</div>'; return; }
+    var b = trkSel.bulan, k = trkSel.kend, done = 0, cnt = { solar: 0, ops: 0, tol: 0 }, list = '';
+    for (var n = 1; n <= TRIPS; n++) {
+      var r = trk[trkKey(b, k, n)] || {};
+      var full = !!(r.solar && r.ops && r.tol);
+      if (full) done++;
+      TK.forEach(function (t) { if (r[t[0]]) cnt[t[0]]++; });
+      list += '<div class="trip' + (full ? ' done' : '') + '"><div class="tno">' + n + '</div><div class="tg">' + TK.map(function (t) {
+        return '<button type="button" class="tk ' + t[2] + (r[t[0]] ? ' on' : '') + '" data-act="ttog" data-n="' + n + '" data-c="' + t[0] + '" aria-pressed="' + (!!r[t[0]]) + '" aria-label="Trip ' + n + ' ' + t[1] + '">' +
+          '<span class="ck"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span>' + t[1] + '</button>';
+      }).join('') + '</div></div>';
+    }
+    var colr = { solar: 'var(--blue)', ops: 'var(--amber)', tol: 'var(--violet)' };
+    var h = '<div class="hero"><div><div class="lbl">Trip lengkap (3 centang)</div><div class="big"><span>' + done + '</span><span class="hsub" style="margin:0 0 0 8px">dari ' + TRIPS + ' trip · ' + esc(k) + '</span></div></div>' +
+      '<div class="prog">' + TK.map(function (t) {
+        return '<div class="r"><span>' + t[1] + '</span><span class="bar"><i style="width:' + (cnt[t[0]] / TRIPS * 100) + '%;background:' + colr[t[0]] + '"></i></span><b>' + cnt[t[0]] + '/' + TRIPS + '</b></div>';
+      }).join('') + '</div></div>';
+    h += '<div class="stack">' + list + '</div>';
+    h += '<div style="text-align:center">' + (trkConfirm
+      ? '<span class="confirm" style="justify-content:center">Kosongkan semua centang ' + esc(k) + ' bulan ini? <button class="lnk" type="button" data-act="treset-yes">Ya, kosongkan</button><button class="lnk" type="button" data-act="treset-no">Batal</button></span>'
+      : '<button class="lnk" type="button" data-act="treset">Kosongkan centang bulan ini</button>') + '</div>';
+    if (!loaded) h = '<div class="empty"><b>Memuat catatan bersama</b>Sebentar, data sedang diambil.</div>';
+    $('tBody').innerHTML = h;
+  }
+  async function toggleTrip(n, col) {
+    if (!trkOk) { toast('Tracker belum aktif. Jalankan update-tracker.sql di Supabase.'); return; }
+    var b = trkSel.bulan, k = trkSel.kend, key = trkKey(b, k, n);
+    var cur = trk[key] || { solar: false, ops: false, tol: false };
+    var nv = !cur[col];
+    trk[key] = { solar: cur.solar, ops: cur.ops, tol: cur.tol };
+    trk[key][col] = nv;
+    renderTracker();
+    var body = { bulan: b, kendaraan: k, trip: n };
+    body[col] = nv;
+    trkPending++;
+    try {
+      await api('trip_tracker?on_conflict=bulan,kendaraan,trip', 'POST', body, { Prefer: 'resolution=merge-duplicates,return=minimal' });
+    } catch (err) {
+      trk[key][col] = !nv;
+      renderTracker();
+      handleErr(err);
+    } finally { trkPending--; }
+  }
+
   /* ---------- Mobil ---------- */
   function renderMobil() {
     var list = vehList(), canEdit = vehTable;
@@ -1087,6 +1197,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     renderKat();
     renderReport();
     renderKonsumsi();
+    renderTracker();
     renderMobil();
     if (keep && $('rnInput')) {
       var el = $('rnInput');
@@ -1191,6 +1302,8 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       await api('rpc/ganti_nama_mobil', 'POST', { lama: old, baru: nv });
       if (formKend === old) { formKend = nv; lsSet('kend', nv); }
       if (rep.kend === old) rep.kend = nv;
+      if (trkSel.kend === old) trkSel.kend = nv;
+      if (kons.kend === old) kons.kend = nv;
       if (filt.kend === old) filt.kend = nv;
       renameFor = null;
       toast('Nama diganti.');
@@ -1249,6 +1362,21 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     }
     if (act === 'pdf') { downloadPdf(); return; }
     if (act === 'csv') { exportCsv(reportRows()); return; }
+    if (act === 'tkmob') { trkSel.kend = b.getAttribute('data-v'); trkConfirm = false; renderTracker(); return; }
+    if (act === 'ttog') { toggleTrip(Number(b.getAttribute('data-n')), b.getAttribute('data-c')); return; }
+    if (act === 'treset') { trkConfirm = true; renderTracker(); return; }
+    if (act === 'treset-no') { trkConfirm = false; renderTracker(); return; }
+    if (act === 'treset-yes') {
+      if (!trkOk || busy) return;
+      busy = true;
+      try {
+        await api('trip_tracker?bulan=eq.' + encodeURIComponent(trkSel.bulan) + '&kendaraan=eq.' + encodeURIComponent(trkSel.kend), 'DELETE');
+        for (var i = 1; i <= TRIPS; i++) delete trk[trkKey(trkSel.bulan, trkSel.kend, i)];
+        toast('Centang dikosongkan.');
+      } catch (err) { handleErr(err); } finally { busy = false; trkConfirm = false; }
+      renderTracker();
+      return;
+    }
     if (act === 'kacc') { var kv = b.getAttribute('data-v'); konsOpen[kv] = !konsOpen[kv]; renderKonsumsi(); return; }
     if (act === 'kmob') { kons.kend = b.getAttribute('data-v'); renderKonsumsi(); return; }
     if (act === 'wkend') {
@@ -1275,6 +1403,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       if (!vehTable || busy) return;
       busy = true;
       try {
+        if (trkOk && vehConfirm) { try { await api('trip_tracker?kendaraan=eq.' + encodeURIComponent(vehConfirm), 'DELETE'); } catch (e2) {} }
         await api('kendaraan?id=eq.' + encodeURIComponent(id), 'DELETE');
         vehConfirm = null;
         toast('Mobil dihapus.');
@@ -1321,6 +1450,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
 
   document.addEventListener('change', function (e) {
     var id = e.target.id;
+    if (id === 'tBulan') { trkSel.bulan = e.target.value; trkConfirm = false; renderTracker(); return; }
     if (id === 'kBulan') { kons.bulan = e.target.value; renderKonsumsi(); return; }
     if (id === 'selPeriode') { period = e.target.value; renderHome(); return; }
     if (id === 'fBulan' || id === 'fKend' || id === 'fKat' || id === 'fOrang') {
