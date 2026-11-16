@@ -314,8 +314,9 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       <fieldset id="fields">
         <div class="form-stack">
           <div class="field">
-            <span class="lb" id="lbKend">Untuk mobil</span>
+            <span class="lb" id="lbKend">Untuk mobil <span class="hint" id="kHint"></span></span>
             <div class="seg" id="segKend" role="group" aria-labelledby="lbKend"></div>
+            <div id="splitBox" class="stack" style="gap:8px" hidden></div>
           </div>
           <div class="field">
             <label for="fJumlah">Jumlah</label>
@@ -531,6 +532,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   var filterOpen = false;
   var hide = lsGet('hide') === '1';
   var formKend = lsGet('kend') || 'Nissan';
+  var formKends = [formKend], splitMode = 'bagi';
   var formKat = BASE_KAT[0];
   var editingId = null, confirmId = null, busy = false, pdfBusy = false;
   var renameFor = null, renameValue = '', vehConfirm = null;
@@ -933,10 +935,39 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   /* ---------- Catat ---------- */
   function renderKend() {
     var opts = VN().concat(['Umum']);
-    if (opts.indexOf(formKend) === -1) formKend = opts[0];
+    formKends = formKends.filter(function (k) { return opts.indexOf(k) !== -1; });
+    if (!formKends.length) formKends = [opts.indexOf(formKend) !== -1 ? formKend : opts[0]];
+    formKend = formKends[0];
+    $('kHint').textContent = editingId ? '' : '(boleh pilih lebih dari satu)';
     $('segKend').innerHTML = opts.map(function (k) {
-      return '<button type="button" class="chipbtn' + (formKend === k ? ' on' : '') + '" data-seg="kend" data-v="' + esc(k) + '" aria-pressed="' + (formKend === k) + '">' + esc(k) + '</button>';
+      var on = formKends.indexOf(k) !== -1;
+      return '<button type="button" class="chipbtn' + (on ? ' on' : '') + '" data-seg="kend" data-v="' + esc(k) + '" aria-pressed="' + on + '">' + esc(k) + '</button>';
     }).join('');
+    updSplit();
+  }
+  function shares(total, n, mode) {
+    var out = [], i;
+    if (mode === 'sama') { for (i = 0; i < n; i++) out.push(total); return out; }
+    var base = Math.floor(total / n), rem = total - base * n;
+    for (i = 0; i < n; i++) out.push(base + (i < rem ? 1 : 0));
+    return out;
+  }
+  function updSplit() {
+    var box = $('splitBox'), n = formKends.length;
+    if (editingId || n < 2) { box.hidden = true; box.innerHTML = ''; return; }
+    var j = parseAmt($('fJumlah').value), l = formKat === 'Solar' ? parseL($('fLiter').value) : 0;
+    var sj = shares(j, n, splitMode), sl = l ? shares(Math.round(l * 100), n, splitMode).map(function (x) { return x / 100; }) : [];
+    var h = '<div class="chips"><button type="button" class="chipbtn' + (splitMode === 'bagi' ? ' on' : '') + '" data-seg="split" data-v="bagi" aria-pressed="' + (splitMode === 'bagi') + '">Bagi rata</button>' +
+      '<button type="button" class="chipbtn' + (splitMode === 'sama' ? ' on' : '') + '" data-seg="split" data-v="sama" aria-pressed="' + (splitMode === 'sama') + '">Sama tiap mobil</button></div>';
+    if (j) {
+      h += '<div class="hint">Jadi ' + n + ' transaksi: ' + formKends.map(function (k, i) {
+        return esc(k) + ' ' + rp(sj[i]) + (sl.length ? ' (' + fmtL(sl[i]) + ' L)' : '');
+      }).join(', ') + '.</div>';
+    } else {
+      h += '<div class="hint">Jumlah ' + (splitMode === 'bagi' ? 'dibagi rata ke' : 'dicatat sama di') + ' tiap mobil, jadi ' + n + ' transaksi.</div>';
+    }
+    box.innerHTML = h;
+    box.hidden = false;
   }
   function renderKat() {
     var all = BASE_KAT.concat(customKats());
@@ -955,7 +986,8 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     $('fLiter').disabled = literOk === false;
     updLitHint();
   }
-  function updLitHint() {
+  function updLitHint() { updLitHintInner(); updSplit(); }
+  function updLitHintInner() {
     var h = $('litHint');
     if (literOk === false) { h.textContent = 'Belum aktif. Jalankan update-konsumsi.sql di Supabase dulu.'; return; }
     var l = parseL($('fLiter').value), j = parseAmt($('fJumlah').value);
@@ -1338,7 +1370,14 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     var seg = e.target.closest('[data-seg]');
     if (seg) {
       var v = seg.getAttribute('data-v');
-      if (seg.getAttribute('data-seg') === 'kend') { formKend = v; lsSet('kend', v); renderKend(); }
+      var sg = seg.getAttribute('data-seg');
+      if (sg === 'split') { splitMode = v; updSplit(); }
+      else if (sg === 'kend') {
+        if (editingId) formKends = [v];
+        else if (formKends.indexOf(v) === -1) formKends.push(v);
+        else if (formKends.length > 1) formKends = formKends.filter(function (x) { return x !== v; });
+        formKend = formKends[0]; lsSet('kend', formKend); renderKend();
+      }
       else { formKat = v; renderKat(); if (v === '__dll') $('fKatCustom').focus(); }
       return;
     }
@@ -1433,6 +1472,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       editingId = id;
       confirmId = null;
       formKend = kendOf(r);
+      formKends = [formKend];
       formKat = r.kategori || BASE_KAT[0];
       $('fTanggal').value = r.tanggal || todayStr();
       $('fJumlah').value = fmtNum(r.jumlah);
@@ -1500,6 +1540,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     if (busy || !password) return;
     var kat = formKat === '__dll' ? normKat($('fKatCustom').value) : formKat;
     if (!kat) { toast('Tulis nama kategori lainnya.'); $('fKatCustom').focus(); return; }
+    formKend = formKends[0];
     var data = {
       tanggal: $('fTanggal').value,
       kendaraan: formKend,
@@ -1521,8 +1562,27 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
         await api('pengeluaran?id=eq.' + encodeURIComponent(editingId), 'PATCH', data, { Prefer: 'return=minimal' });
         toast('Perubahan tersimpan.');
       } else {
-        await api('pengeluaran', 'POST', data, { Prefer: 'return=minimal' });
-        toast('Tersimpan.');
+        var nK = formKends.length;
+        if (nK > 1) {
+          var sj = shares(data.jumlah, nK, splitMode);
+          var sl = data.liter ? shares(Math.round(data.liter * 100), nK, splitMode).map(function (x) { return x / 100; }) : [];
+          if (sj.some(function (x) { return !(x > 0); }) || (sl.length && sl.some(function (x) { return !(x > 0); }))) {
+            toast('Jumlah terlalu kecil untuk dibagi ke ' + nK + ' mobil.');
+            busy = false; $('btnSave').disabled = false;
+            return;
+          }
+          var batch = formKends.map(function (k, i) {
+            var o = {}; for (var key in data) o[key] = data[key];
+            o.kendaraan = k; o.jumlah = sj[i];
+            if ('liter' in data) o.liter = sl.length ? sl[i] : null;
+            return o;
+          });
+          await api('pengeluaran', 'POST', batch, { Prefer: 'return=minimal' });
+          toast('Tersimpan jadi ' + nK + ' transaksi.');
+        } else {
+          await api('pengeluaran', 'POST', data, { Prefer: 'return=minimal' });
+          toast('Tersimpan.');
+        }
       }
       lsSet('oleh', data.oleh);
       formKat = kat;
