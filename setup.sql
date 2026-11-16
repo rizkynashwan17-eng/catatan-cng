@@ -195,3 +195,11 @@ notify pgrst, 'reload schema';
   add column if not exists selesai boolean not null default false;
 
 notify pgrst, 'reload schema';
+
+-- ===== Biaya standar per trip =====
+alter table public.acuan_mobil
+  add column if not exists solar_trip bigint not null default 870000 check (solar_trip >= 0),
+  add column if not exists ops_trip bigint not null default 500000 check (ops_trip >= 0),
+  add column if not exists tol_trip bigint not null default 300000 check (tol_trip >= 0);
+
+notify pgrst, 'reload schema';

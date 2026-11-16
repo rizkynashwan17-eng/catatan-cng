@@ -540,7 +540,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   var literOk = null, kons = { bulan: todayStr().slice(0, 7), kend: '' }, konsOpen = { s: true, o: false };
   var TRIPS = 15, TK = [['solar', 'Solar', 's'], ['ops', 'Ops', 'o'], ['tol', 'Tol', 't']];
   var trk = {}, trkOk = true, trkPending = 0, trkConfirm = false, trkSel = { bulan: todayStr().slice(0, 7), kend: '' };
-  var selesaiOk = null, DEF_P = 65000000, DEF_G = 7500000, acuan = {}, acuanOk = true, acuanFor = null, acDraft = { p: '', g: '' };
+  var selesaiOk = null, acuanColsOk = null, DEF_S = 870000, DEF_O = 500000, DEF_T = 300000, DEF_P = 65000000, DEF_G = 7500000, acuan = {}, acuanOk = true, acuanFor = null, acDraft = { p: '', g: '' };
   var rows = [], vehicles = [], vehTable = false, rowsSig = '', loaded = false, vnCache = null;
   var password = lsGet('pw') || '';
   var view = 'beranda';
@@ -622,13 +622,19 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       if (err && err.status === 400) selesaiOk = false;
     });
   }
+  function checkAcuanCols() {
+    if (acuanColsOk !== null) return Promise.resolve();
+    return api('acuan_mobil?select=solar_trip&limit=1').then(function () { acuanColsOk = true; }).catch(function (err) {
+      if (err && err.status === 400) acuanColsOk = false;
+    });
+  }
   function fetchAcuan() {
     return api('acuan_mobil?select=*').catch(function (err) {
       if (err && err.status === 404) return null;
       throw err;
     });
   }
-  function acuanOf(n) { return acuan[n] || { pendapatan: DEF_P, gaji: DEF_G }; }
+  function acuanOf(n) { return acuan[n] || { pendapatan: DEF_P, gaji: DEF_G, solar: DEF_S, ops: DEF_O, tol: DEF_T }; }
   function fetchTrk() {
     return api('trip_tracker?select=*&limit=5000').catch(function (err) {
       if (err && err.status === 404) return null;
@@ -648,7 +654,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   }
   function refresh(silent) {
     if (trkPending > 0) return Promise.resolve();
-    return checkLiter().then(checkSelesai).then(function () { return Promise.all([fetchAll(), fetchVeh(), fetchTrk(), fetchAcuan()]); }).then(function (res) {
+    return checkLiter().then(checkSelesai).then(checkAcuanCols).then(function () { return Promise.all([fetchAll(), fetchVeh(), fetchTrk(), fetchAcuan()]); }).then(function (res) {
       var list = res[0], veh = res[1], tr = res[2], ac = res[3];
       var sig = JSON.stringify([list, veh, tr, ac]);
       var first = !loaded;
@@ -658,7 +664,10 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
         rowsSig = sig; rows = list; vehTable = veh !== null; vehicles = veh || []; vnCache = null;
         trkOk = tr !== null; trk = indexTrk(tr || []);
         acuanOk = ac !== null; acuan = {};
-        (ac || []).forEach(function (r) { acuan[r.kendaraan] = { pendapatan: Number(r.pendapatan) || 0, gaji: Number(r.gaji) || 0 }; });
+        (ac || []).forEach(function (r) {
+          acuan[r.kendaraan] = { pendapatan: Number(r.pendapatan) || 0, gaji: Number(r.gaji) || 0,
+            solar: r.solar_trip != null ? Number(r.solar_trip) : DEF_S, ops: r.ops_trip != null ? Number(r.ops_trip) : DEF_O, tol: r.tol_trip != null ? Number(r.tol_trip) : DEF_T };
+        });
         renderAll();
       }
     }).catch(function (err) { onApiError(err, silent); });
@@ -702,7 +711,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     password = '';
     lsSet('pw', '');
     clearInterval(pollTimer);
-    loaded = false; literOk = null; selesaiOk = null; trk = {}; acuan = {}; rows = []; vehicles = []; rowsSig = ''; vnCache = null;
+    loaded = false; literOk = null; selesaiOk = null; acuanColsOk = null; trk = {}; acuan = {}; rows = []; vehicles = []; rowsSig = ''; vnCache = null;
     showGate(msg || '');
   }
   function start() {
@@ -913,7 +922,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       h += '<div class="stack">' + list.slice(0, 5).map(function (r) { return itemHtml(r, false, true); }).join('') + '</div>';
     }
     h += '<div style="text-align:center"><button class="lnk" type="button" data-act="lock">Kunci aplikasi</button></div>';
-    h += '<p class="hint" style="text-align:center;margin:0">Versi 16 Nov 2026, jam 15.30</p>';
+    h += '<p class="hint" style="text-align:center;margin:0">Versi 16 Nov 2026, jam 15.50</p>';
     $('v-beranda').innerHTML = h;
   }
 
@@ -1163,6 +1172,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     var M = kons.bulan, today = todayStr(), cur = today.slice(0, 7);
     var D = new Date(Number(M.slice(0, 4)), Number(M.slice(5, 7)), 0).getDate();
     var d = M < cur ? D : (M === cur ? Math.min(D, Number(today.slice(8, 10))) : 0);
+    var past = M < cur;
     var names = kons.kend ? [kons.kend] : VN();
     var out = head;
     names.forEach(function (n) {
@@ -1170,31 +1180,44 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       var mine = rows.filter(function (r) { return kendOf(r) === n && String(r.tanggal || '').slice(0, 7) === M; });
       var X = 0, gajiRec = 0;
       mine.forEach(function (r) { if (r.kategori === 'Gaji') gajiRec += Number(r.jumlah) || 0; else X += Number(r.jumlah) || 0; });
-      var proj = d > 0 && d < D ? X / d * D : X;
-      var sisa = budget - X, projSisa = budget - proj;
+      var un = { solar: 0, ops: 0, tol: 0 }, selesai = 0;
+      for (var t = 1; t <= TRIPS; t++) {
+        var q = trk[trkKey(M, n, t)] || {};
+        if (!q.solar) un.solar++;
+        if (!q.ops) un.ops++;
+        if (!q.tol) un.tol++;
+        if (q.selesai) selesai++;
+      }
+      var rest = past ? 0 : un.solar * a.solar + un.ops * a.ops + un.tol * a.tol;
+      var opProj = X + rest, total = opProj + G, projSisa = P - total;
+      var sisa = budget - X;
       var pct = budget > 0 ? X / budget * 100 : (X > 0 ? 100 : 0);
-      var over = proj > budget;
-      var trips = 0;
-      for (var t = 1; t <= TRIPS; t++) { var q = trk[trkKey(M, n, t)]; if (q && q.selesai) trips++; }
-      var projTrip = (M === cur && trips > 0) ? X / trips * TRIPS : null;
-      var tagTxt = d === 0 ? 'Belum mulai' : (M < cur ? (over ? 'Melewati anggaran' : 'Sesuai anggaran') : (over ? 'Diperkirakan lewat' : 'Di jalur'));
+      var over = opProj > budget;
+      var tagTxt = d === 0 ? 'Belum mulai' : (past ? (over ? 'Melewati anggaran' : 'Sesuai anggaran') : (over ? 'Diperkirakan lewat' : 'Di jalur'));
       var tagCls = d === 0 ? '' : (over ? ' bad' : ' ok');
       var mark = d > 0 && d < D ? '<span class="kmark" style="left:' + (d / D * 100) + '%" title="Posisi hari ini"></span>' : '';
+      var restRows = '';
+      [['solar', 'Solar'], ['ops', 'Ops'], ['tol', 'Tol']].forEach(function (c) {
+        if (!past && un[c[0]] > 0) restRows += '<div class="krow"><span>' + c[1] + ' belum dikasih (' + un[c[0]] + ' trip × ' + rp(a[c[0]]) + ')</span><b>' + rp(un[c[0]] * a[c[0]]) + '</b></div>';
+      });
       out += '<div class="card ' + kcls(n) + '">' +
         '<div class="acctop" style="margin-bottom:8px"><span class="wico">' + ico('truck', 16) + '</span><span class="t1">' + esc(n) + '</span><span class="tag' + tagCls + '">' + tagTxt + '</span></div>' +
         '<div class="krow"><span>Pendapatan (acuan)</span><b>' + rp(P) + '</b></div>' +
         '<div class="krow"><span>Gaji sopir (acuan)</span><b>' + rp(G) + '</b></div>' +
         '<div class="krow sep"><span>Anggaran biaya operasional</span><b>' + rp(budget) + '</b></div>' +
         '<div class="kbar"><i class="' + (pct > 100 ? 'over' : '') + '" style="width:' + Math.min(100, Math.round(pct)) + '%"></i>' + mark + '</div>' +
-        '<div class="krow"><span>Terpakai sampai sekarang</span><b>' + rp(X) + ' <small class="muted">(' + Math.round(pct) + '%)</small></b></div>' +
+        '<div class="krow"><span>Sudah keluar (tercatat)</span><b>' + rp(X) + ' <small class="muted">(' + Math.round(pct) + '%)</small></b></div>' +
         '<div class="krow"><span>Sisa anggaran</span><b class="' + (sisa < 0 ? 'neg' : 'pos') + '">' + (sisa < 0 ? '-' : '') + rp(Math.abs(sisa)) + '</b></div>' +
-        (d > 0 && d < D ? '<div class="krow sep"><span>Perkiraan biaya akhir bulan</span><b>' + rp(proj) + '</b></div>' : '') +
-        (d > 0 ? '<div class="krow' + (d < D ? '' : ' sep') + '"><span>' + (d < D ? 'Perkiraan sisa setelah biaya' : 'Sisa setelah biaya') + '</span><b class="' + (projSisa < 0 ? 'neg' : 'pos') + '">' + (projSisa < 0 ? '-' : '') + rp(Math.abs(projSisa)) + (P > 0 ? ' <small class="muted">(' + Math.round(projSisa / P * 100) + '%)</small>' : '') + '</b></div>' : '') +
-        (projTrip !== null ? '<div class="krow"><span>Dari trip (' + trips + ' dari ' + TRIPS + ' selesai)</span><b>' + rp(projTrip) + '</b></div>' : '') +
+        (restRows ? '<div class="krow sep"><span>Yang belum dikasih (dari Tracker)</span><b>' + rp(rest) + '</b></div>' + restRows : '') +
+        '<div class="krow sep"><span>' + (past ? 'Biaya operasional bulan ini' : 'Perkiraan biaya operasional akhir bulan') + '</span><b>' + rp(opProj) + '</b></div>' +
+        '<div class="krow"><span>Gaji sopir (' + rp(G / TRIPS) + ' × ' + TRIPS + ' trip)</span><b>' + rp(G) + '</b></div>' +
+        '<div class="krow"><span>' + (past ? 'Total biaya' : 'Perkiraan total biaya') + '</span><b>' + rp(total) + '</b></div>' +
+        '<div class="krow sep"><span>' + (past ? 'Sisa setelah biaya' : 'Perkiraan sisa setelah biaya') + '</span><b class="' + (projSisa < 0 ? 'neg' : 'pos') + '">' + (projSisa < 0 ? '-' : '') + rp(Math.abs(projSisa)) + (P > 0 ? ' <small class="muted">(' + Math.round(projSisa / P * 100) + '%)</small>' : '') + '</b></div>' +
+        '<div class="krow"><span>Trip selesai</span><b>' + selesai + ' dari ' + TRIPS + '</b></div>' +
         (gajiRec > 0 ? '<div class="krow"><span>Gaji tercatat bulan ini</span><b>' + rp(gajiRec) + '</b></div>' : '') +
         '</div>';
     });
-    out += '<p class="hint" style="margin:0">Perkiraan = biaya tercatat dibagi hari berjalan, dikali jumlah hari dalam bulan. Biaya tidak termasuk kategori Gaji, karena gaji sudah dihitung dari acuan. Pengeluaran Umum tidak dibagi ke mobil.' + (d > 0 && d < 7 && M === cur ? ' Baru ' + d + ' hari, jadi perkiraannya masih kasar.' : '') + (acuanOk ? '' : ' Acuan memakai nilai awal.') + '</p>';
+    out += '<p class="hint" style="margin:0">Perkiraan = biaya yang sudah tercatat + biaya standar per trip yang belum dikasih (centang Solar, Ops, Tol di Tracker) + gaji. Kalau centangnya sudah dipasang, biaya itu tidak dihitung dua kali, jadi centang hanya setelah uangnya dikasih dan dicatat. Catatan kategori Gaji tidak dihitung karena gaji diambil dari acuan. Pengeluaran Umum tidak dibagi ke mobil.' + (acuanOk ? '' : ' Acuan memakai nilai awal.') + (trkOk ? '' : ' Tracker belum aktif, jadi semua trip dianggap belum dikasih.') + '</p>';
     return out;
   }
 
@@ -1268,11 +1291,12 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   async function saveAcuan() {
     if (busy || !acuanFor) return;
     var n = acuanFor, pv = parseAmt($('acP').value), gv = parseAmt($('acG').value);
+    var cur0 = acuanOf(n), sv = acuanColsOk === false ? cur0.solar : parseAmt($('acS').value), ov = acuanColsOk === false ? cur0.ops : parseAmt($('acO').value), tv = acuanColsOk === false ? cur0.tol : parseAmt($('acT').value);
     if (!(pv > 0)) { toast('Isi pendapatan per bulan.'); return; }
     busy = true;
     try {
-      await api('acuan_mobil?on_conflict=kendaraan', 'POST', { kendaraan: n, pendapatan: pv, gaji: gv }, { Prefer: 'resolution=merge-duplicates,return=minimal' });
-      acuan[n] = { pendapatan: pv, gaji: gv };
+      await api('acuan_mobil?on_conflict=kendaraan', 'POST', (acuanColsOk === false ? { kendaraan: n, pendapatan: pv, gaji: gv } : { kendaraan: n, pendapatan: pv, gaji: gv, solar_trip: sv, ops_trip: ov, tol_trip: tv }), { Prefer: 'resolution=merge-duplicates,return=minimal' });
+      acuan[n] = { pendapatan: pv, gaji: gv, solar: sv, ops: ov, tol: tv };
       acuanFor = null;
       toast('Acuan tersimpan.');
       renderAll();
@@ -1298,6 +1322,9 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       } else if (acuanFor === v.nama) {
         bottom = '<div class="stack" style="gap:10px"><div class="field"><label for="acP">Pendapatan per bulan</label><div class="amt"><span>Rp</span><input type="text" id="acP" inputmode="numeric" value="' + esc(acDraft.p) + '"></div></div>' +
           '<div class="field"><label for="acG">Gaji sopir per bulan</label><div class="amt"><span>Rp</span><input type="text" id="acG" inputmode="numeric" value="' + esc(acDraft.g) + '"></div></div>' +
+          [['acS', 's', 'Solar per trip'], ['acO', 'o', 'Ops per trip'], ['acT', 't', 'Tol per trip']].map(function (f) {
+            return '<div class="field"><label for="' + f[0] + '">' + f[2] + '</label><div class="amt"><span>Rp</span><input type="text" id="' + f[0] + '" inputmode="numeric" value="' + esc(acDraft[f[1]]) + '"' + (acuanColsOk === false ? ' disabled' : '') + '></div></div>';
+          }).join('') + (acuanColsOk === false ? '<div class="hint">Biaya per trip belum bisa diubah. Jalankan update-pertrip.sql di Supabase satu kali.</div>' : '') +
           '<div class="addrow"><button class="btn" type="button" data-act="ac-save">Simpan</button><button class="btn ghost" type="button" data-act="ac-cancel">Batal</button></div></div>';
       } else if (canEdit || acuanOk) {
         bottom = '<div class="item-acts">' + (canEdit ? '<button class="lnk" type="button" data-act="rn-start" data-n="' + esc(v.nama) + '">Ganti nama</button>' : '') +
@@ -1305,7 +1332,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
           (canEdit && v.count === 0 && v.id ? '<button class="lnk danger" type="button" data-act="veh-del" data-n="' + esc(v.nama) + '">Hapus</button>' : '') + '</div>';
       }
       var ac = acuanOf(v.nama);
-      var acInfo = '<div class="vsub">Acuan per bulan: pendapatan ' + rp(ac.pendapatan) + ' \u00B7 gaji ' + rp(ac.gaji) + '</div>';
+      var acInfo = '<div class="vsub">Acuan per bulan: pendapatan ' + rp(ac.pendapatan) + ' \u00B7 gaji ' + rp(ac.gaji) + '</div><div class="vsub">Per trip: solar ' + rp(ac.solar) + ' \u00B7 ops ' + rp(ac.ops) + ' \u00B7 tol ' + rp(ac.tol) + '</div>';
       return '<article class="vrow ' + kcls(v.nama) + '">' + top + acInfo + bottom + '</article>';
     }).join('');
     var uc = 0, ut = 0;
@@ -1504,7 +1531,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     }
     if (act === 'pdf') { downloadPdf(); return; }
     if (act === 'csv') { exportCsv(reportRows()); return; }
-    if (act === 'ac-start') { var an = b.getAttribute('data-n'), ao = acuanOf(an); acuanFor = an; acDraft = { p: fmtNum(ao.pendapatan), g: fmtNum(ao.gaji) }; renameFor = null; vehConfirm = null; renderMobil(); return; }
+    if (act === 'ac-start') { var an = b.getAttribute('data-n'), ao = acuanOf(an); acuanFor = an; acDraft = { p: fmtNum(ao.pendapatan), g: fmtNum(ao.gaji), s: fmtNum(ao.solar), o: fmtNum(ao.ops), t: fmtNum(ao.tol) }; renameFor = null; vehConfirm = null; renderMobil(); return; }
     if (act === 'ac-cancel') { acuanFor = null; renderMobil(); return; }
     if (act === 'ac-save') { saveAcuan(); return; }
     if (act === 'tkmob') { trkSel.kend = b.getAttribute('data-v'); trkConfirm = false; renderTracker(); return; }
@@ -1622,10 +1649,11 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   document.addEventListener('input', function (e) {
     if (e.target.id === 'rnInput') renameValue = e.target.value;
     if (e.target.id === 'fLiter') updLitHint();
-    if (e.target.id === 'acP' || e.target.id === 'acG') {
+    var acMap = { acP: 'p', acG: 'g', acS: 's', acO: 'o', acT: 't' };
+    if (acMap[e.target.id]) {
       var an2 = parseAmt(e.target.value);
       e.target.value = an2 ? fmtNum(an2) : '';
-      if (e.target.id === 'acP') acDraft.p = e.target.value; else acDraft.g = e.target.value;
+      acDraft[acMap[e.target.id]] = e.target.value;
     }
   });
   document.addEventListener('keydown', function (e) {
