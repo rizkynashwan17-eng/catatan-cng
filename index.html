@@ -276,7 +276,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
 .trip.done { border-color: var(--green); }
 .tno { width: 34px; height: 34px; border-radius: 11px; background: var(--card); display: grid; place-items: center; font-weight: 800; font-size: 13px; }
 .trip.done .tno { background: var(--green); color: var(--bg); }
-.tg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; min-width: 0; }
+.tg { display: grid; grid-template-columns: repeat(3, 1fr) 40px; gap: 6px; min-width: 0; }
 .tk { height: 38px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card); font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; color: var(--muted); cursor: pointer; min-width: 0; }
 .tk .ck { width: 15px; height: 15px; border-radius: 5px; border: 1.5px solid currentColor; display: grid; place-items: center; flex: none; }
 .tk .ck svg { display: none; }
@@ -285,6 +285,8 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
 .tk.on.s { background: var(--blue-soft); color: var(--blue); border-color: var(--blue); }
 .tk.on.o { background: var(--amber-soft); color: var(--amber); border-color: var(--amber); }
 .tk.on.t { background: var(--violet-soft); color: var(--violet); border-color: var(--violet); }
+.tk.f { padding: 0; }
+.tk.on.f { background: var(--green-soft); color: var(--green); border-color: var(--green); }
 .nav { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px; display: flex; gap: 2px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); z-index: 15; max-width: calc(100% - 24px); }
 .nav-i { height: 42px; min-width: 40px; padding: 0 9px; border-radius: 999px; border: 0; background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 5px; font-weight: 700; font-size: 12px; cursor: pointer; }
 .nav-i.on { background: var(--ink); color: var(--bg); padding: 0 12px; }
@@ -538,7 +540,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   var literOk = null, kons = { bulan: todayStr().slice(0, 7), kend: '' }, konsOpen = { s: true, o: false };
   var TRIPS = 15, TK = [['solar', 'Solar', 's'], ['ops', 'Ops', 'o'], ['tol', 'Tol', 't']];
   var trk = {}, trkOk = true, trkPending = 0, trkConfirm = false, trkSel = { bulan: todayStr().slice(0, 7), kend: '' };
-  var DEF_P = 65000000, DEF_G = 7500000, acuan = {}, acuanOk = true, acuanFor = null, acDraft = { p: '', g: '' };
+  var selesaiOk = null, DEF_P = 65000000, DEF_G = 7500000, acuan = {}, acuanOk = true, acuanFor = null, acDraft = { p: '', g: '' };
   var rows = [], vehicles = [], vehTable = false, rowsSig = '', loaded = false, vnCache = null;
   var password = lsGet('pw') || '';
   var view = 'beranda';
@@ -614,6 +616,12 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     });
   }
   function trkKey(b, k, n) { return b + '|' + k + '|' + n; }
+  function checkSelesai() {
+    if (selesaiOk !== null) return Promise.resolve();
+    return api('trip_tracker?select=selesai&limit=1').then(function () { selesaiOk = true; }).catch(function (err) {
+      if (err && err.status === 400) selesaiOk = false;
+    });
+  }
   function fetchAcuan() {
     return api('acuan_mobil?select=*').catch(function (err) {
       if (err && err.status === 404) return null;
@@ -629,7 +637,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   }
   function indexTrk(list) {
     var m = {};
-    list.forEach(function (r) { m[trkKey(r.bulan, r.kendaraan, r.trip)] = { solar: !!r.solar, ops: !!r.ops, tol: !!r.tol }; });
+    list.forEach(function (r) { m[trkKey(r.bulan, r.kendaraan, r.trip)] = { solar: !!r.solar, ops: !!r.ops, tol: !!r.tol, selesai: !!r.selesai }; });
     return m;
   }
   function checkLiter() {
@@ -640,7 +648,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   }
   function refresh(silent) {
     if (trkPending > 0) return Promise.resolve();
-    return checkLiter().then(function () { return Promise.all([fetchAll(), fetchVeh(), fetchTrk(), fetchAcuan()]); }).then(function (res) {
+    return checkLiter().then(checkSelesai).then(function () { return Promise.all([fetchAll(), fetchVeh(), fetchTrk(), fetchAcuan()]); }).then(function (res) {
       var list = res[0], veh = res[1], tr = res[2], ac = res[3];
       var sig = JSON.stringify([list, veh, tr, ac]);
       var first = !loaded;
@@ -694,7 +702,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     password = '';
     lsSet('pw', '');
     clearInterval(pollTimer);
-    loaded = false; literOk = null; trk = {}; acuan = {}; rows = []; vehicles = []; rowsSig = ''; vnCache = null;
+    loaded = false; literOk = null; selesaiOk = null; trk = {}; acuan = {}; rows = []; vehicles = []; rowsSig = ''; vnCache = null;
     showGate(msg || '');
   }
   function start() {
@@ -1166,7 +1174,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       var pct = budget > 0 ? X / budget * 100 : (X > 0 ? 100 : 0);
       var over = proj > budget;
       var trips = 0;
-      for (var t = 1; t <= TRIPS; t++) { var q = trk[trkKey(M, n, t)]; if (q && q.solar && q.ops && q.tol) trips++; }
+      for (var t = 1; t <= TRIPS; t++) { var q = trk[trkKey(M, n, t)]; if (q && q.selesai) trips++; }
       var projTrip = (M === cur && trips > 0) ? X / trips * TRIPS : null;
       var tagTxt = d === 0 ? 'Belum mulai' : (M < cur ? (over ? 'Melewati anggaran' : 'Sesuai anggaran') : (over ? 'Diperkirakan lewat' : 'Di jalur'));
       var tagCls = d === 0 ? '' : (over ? ' bad' : ' ok');
@@ -1201,7 +1209,8 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   function renderTracker() {
     var names = VN();
     if (!trkSel.kend || names.indexOf(trkSel.kend) === -1) trkSel.kend = names[0] || '';
-    $('tNote').hidden = trkOk;
+    $('tNote').hidden = trkOk && selesaiOk !== false;
+    $('tNote').textContent = trkOk ? 'Centang Selesai belum aktif. Jalankan file update-selesai.sql di SQL Editor Supabase satu kali, lalu muat ulang halaman ini.' : 'Tracker belum aktif. Jalankan file update-tracker.sql di SQL Editor Supabase satu kali, lalu muat ulang halaman ini.';
     $('tBulan').innerHTML = trkMonths().map(function (m) {
       return '<option value="' + m + '"' + (trkSel.bulan === m ? ' selected' : '') + '>' + esc(monthShort(m)) + '</option>';
     }).join('');
@@ -1212,19 +1221,21 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     var b = trkSel.bulan, k = trkSel.kend, done = 0, cnt = { solar: 0, ops: 0, tol: 0 }, list = '';
     for (var n = 1; n <= TRIPS; n++) {
       var r = trk[trkKey(b, k, n)] || {};
-      var full = !!(r.solar && r.ops && r.tol);
+      var full = !!r.selesai;
       if (full) done++;
       TK.forEach(function (t) { if (r[t[0]]) cnt[t[0]]++; });
       list += '<div class="trip' + (full ? ' done' : '') + '"><div class="tno">' + n + '</div><div class="tg">' + TK.map(function (t) {
         return '<button type="button" class="tk ' + t[2] + (r[t[0]] ? ' on' : '') + '" data-act="ttog" data-n="' + n + '" data-c="' + t[0] + '" aria-pressed="' + (!!r[t[0]]) + '" aria-label="Trip ' + n + ' ' + t[1] + '">' +
           '<span class="ck"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span>' + t[1] + '</button>';
-      }).join('') + '</div></div>';
+      }).join('') + '<button type="button" class="tk f' + (r.selesai ? ' on' : '') + '" data-act="ttog" data-n="' + n + '" data-c="selesai" aria-pressed="' + (!!r.selesai) + '" aria-label="Trip ' + n + ' selesai">' +
+        '<span class="ck"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></span></button></div></div>';
     }
     var colr = { solar: 'var(--blue)', ops: 'var(--amber)', tol: 'var(--violet)' };
-    var h = '<div class="hero"><div><div class="lbl">Trip lengkap (3 centang)</div><div class="big"><span>' + done + '</span><span class="hsub" style="margin:0 0 0 8px">dari ' + TRIPS + ' trip · ' + esc(k) + '</span></div></div>' +
+    var h = '<div class="hero"><div><div class="lbl">Trip selesai</div><div class="big"><span>' + done + '</span><span class="hsub" style="margin:0 0 0 8px">dari ' + TRIPS + ' trip · ' + esc(k) + '</span></div></div>' +
       '<div class="prog">' + TK.map(function (t) {
         return '<div class="r"><span>' + t[1] + '</span><span class="bar"><i style="width:' + (cnt[t[0]] / TRIPS * 100) + '%;background:' + colr[t[0]] + '"></i></span><b>' + cnt[t[0]] + '/' + TRIPS + '</b></div>';
       }).join('') + '</div></div>';
+    h += '<div class="hint">Solar, Ops, Tol: uang sudah dikasih. Tombol centang di kanan: trip selesai.</div>';
     h += '<div class="stack">' + list + '</div>';
     h += '<div style="text-align:center">' + (trkConfirm
       ? '<span class="confirm" style="justify-content:center">Kosongkan semua centang ' + esc(k) + ' bulan ini? <button class="lnk" type="button" data-act="treset-yes">Ya, kosongkan</button><button class="lnk" type="button" data-act="treset-no">Batal</button></span>'
@@ -1234,10 +1245,11 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   }
   async function toggleTrip(n, col) {
     if (!trkOk) { toast('Tracker belum aktif. Jalankan update-tracker.sql di Supabase.'); return; }
+    if (col === 'selesai' && selesaiOk === false) { toast('Centang Selesai belum aktif. Jalankan update-selesai.sql di Supabase.'); return; }
     var b = trkSel.bulan, k = trkSel.kend, key = trkKey(b, k, n);
-    var cur = trk[key] || { solar: false, ops: false, tol: false };
+    var cur = trk[key] || { solar: false, ops: false, tol: false, selesai: false };
     var nv = !cur[col];
-    trk[key] = { solar: cur.solar, ops: cur.ops, tol: cur.tol };
+    trk[key] = { solar: cur.solar, ops: cur.ops, tol: cur.tol, selesai: !!cur.selesai };
     trk[key][col] = nv;
     renderTracker();
     var body = { bulan: b, kendaraan: k, trip: n };

@@ -190,3 +190,8 @@ $$;
 grant execute on function public.ganti_nama_mobil(text, text) to anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ===== Centang trip selesai =====
+  add column if not exists selesai boolean not null default false;
+
+notify pgrst, 'reload schema';
