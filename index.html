@@ -252,10 +252,13 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
 .khero .b small { font-size: 12px; font-weight: 600; color: var(--hero-mute); }
 .hint { font-size: 11.5px; color: var(--muted); }
 .fline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.bars li > .bb { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; align-items: baseline; width: 100%; cursor: pointer; grid-column: 1 / -1; border-radius: 8px; }
+.bars li > .bb:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.bars li > .bb .a::after { content: ' \203A'; color: var(--muted); font-weight: 700; }
 /* Acuan */
 .krow { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; font-size: 12.5px; }
-.krow span { color: var(--muted); min-width: 0; }
-.krow b { font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+.krow span { color: var(--muted); min-width: 0; flex: 1; }
+.krow b { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; flex: none; }
 .krow.sep { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 9px; }
 .krow.sep span { color: var(--ink); font-weight: 700; }
 .krow .neg { color: var(--danger); }
@@ -398,7 +401,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
   <section class="view" id="v-konsumsi" aria-label="Konsumsi" hidden>
     <div class="page-head">
       <h1>Konsumsi</h1>
-      <p>Pemakaian solar dan biaya operasional. Ketuk kartu untuk melihat daftarnya.</p>
+      <p>Pemakaian solar per mobil. Ketuk kartu untuk melihat daftarnya.</p>
     </div>
     <div class="notice" id="litNote" hidden>Kolom liter belum aktif. Jalankan update-konsumsi.sql di SQL Editor Supabase satu kali, lalu muat ulang halaman ini.</div>
     <div class="fline"><div class="field" style="min-width:140px"><label for="kBulan" class="sr" style="position:absolute;left:-9999px">Periode</label><select class="sel" id="kBulan"></select></div></div>
@@ -845,12 +848,14 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     return Object.keys(map).map(function (k) { return { name: k, total: map[k] }; })
       .sort(function (a, b) { return b.total - a.total; });
   }
-  function barsHtml(items, masked, colored) {
+  function barsHtml(items, masked, colored, act) {
     if (!items.length) return '<p class="muted" style="margin:0">Belum ada data.</p>';
     var max = items[0].total || 1;
     return '<ul class="bars' + (colored ? ' col' : '') + '">' + items.map(function (it) {
-      return '<li' + (colored ? ' class="' + kcls(it.name) + '"' : '') + '><span class="n">' + esc(colored ? kLabel(it.name) : it.name) + '</span><span class="a">' + (masked ? mny(it.total) : rp(it.total)) + '</span>' +
-        '<span class="bar"><i style="width:' + Math.max(3, Math.round(it.total / max * 100)) + '%"></i></span></li>';
+      var inner = '<span class="n">' + esc(colored ? kLabel(it.name) : it.name) + '</span><span class="a">' + (masked ? mny(it.total) : rp(it.total)) + '</span>' +
+        '<span class="bar"><i style="width:' + Math.max(3, Math.round(it.total / max * 100)) + '%"></i></span>';
+      if (act) inner = '<button type="button" class="bb" data-act="' + act + '" data-k="' + esc(it.name) + '" aria-label="Lihat riwayat ' + esc(it.name) + '">' + inner + '</button>';
+      return '<li' + (colored ? ' class="' + kcls(it.name) + '"' : '') + '>' + inner + '</li>';
     }).join('') + '</ul>';
   }
 
@@ -911,18 +916,11 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       return wcard(k, names.length % 2 === 1 && i === names.length - 1);
     }).join('') + wcard('Umum', true) + '</div>';
 
-    h += '<div class="card"><h3 style="margin-bottom:12px">Per kategori</h3>' + barsHtml(sumBy(list, function (r) { return r.kategori || 'Tanpa kategori'; }), true) + '</div>';
+    h += '<div class="card"><h3 style="margin-bottom:4px">Per kategori</h3><p class="hint" style="margin:0 0 12px">Ketuk kategori untuk melihat riwayatnya.</p>' + barsHtml(sumBy(list, function (r) { return r.kategori || 'Tanpa kategori'; }), true, false, 'wkat') + '</div>';
 
-    h += '<div class="sec-head"><h3>Pengeluaran terbaru</h3><button class="lnk" type="button" data-go="riwayat">Lihat semua</button></div>';
-    if (!loaded) {
-      h += '<div class="empty"><b>Memuat catatan bersama</b>Sebentar, data sedang diambil.</div>';
-    } else if (!list.length) {
-      h += '<div class="empty"><b>' + (rows.length ? 'Belum ada catatan di periode ini' : 'Belum ada catatan') + '</b>Ketuk Catat Baru untuk mencatat pengeluaran. Temanmu langsung bisa melihatnya.</div>';
-    } else {
-      h += '<div class="stack">' + list.slice(0, 5).map(function (r) { return itemHtml(r, false, true); }).join('') + '</div>';
-    }
+    h += forecastHtml(period, '');
     h += '<div style="text-align:center"><button class="lnk" type="button" data-act="lock">Kunci aplikasi</button></div>';
-    h += '<p class="hint" style="text-align:center;margin:0">Versi 16 Nov 2026, jam 16.10</p>';
+    h += '<p class="hint" style="text-align:center;margin:0">Versi 16 Nov 2026, jam 16.30</p>';
     $('v-beranda').innerHTML = h;
   }
 
@@ -1138,8 +1136,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     var last = SL[0];
 
     var h = '<div class="hero"><div class="khero"><div><div class="lbl">Solar (rupiah)</div><div class="b">' + rp(SR) + '</div><div class="hsub">' + S.length + ' catatan</div></div>' +
-      '<div><div class="lbl">Liter tercatat</div><div class="b">' + fmtL(L) + ' <small>L</small></div><div class="hsub">' + (L ? rp(SLR / L) + ' per liter' : 'belum ada liter') + '</div></div></div>' +
-      '<div class="hsub" style="margin-top:-6px">Operasional ' + rp(OR) + ' \u00B7 ' + O.length + ' catatan</div></div>';
+      '<div><div class="lbl">Liter tercatat</div><div class="b">' + fmtL(L) + ' <small>L</small></div><div class="hsub">' + (L ? rp(SLR / L) + ' per liter' : 'belum ada liter') + '</div></div></div></div>';
 
     var perMob = (kons.kend ? [kons.kend] : names).map(function (n) {
       var x = SL.filter(function (r) { return kendOf(r) === n; });
@@ -1154,26 +1151,19 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       (perMob ? '<div class="mini">' + perMob + '</div>' : '') + '</div>' +
       '<div class="klist">' + (S.map(function (r) { return kItem(r, true); }).join('') || '<div class="sub">Belum ada catatan solar.</div>') + '</div></div>';
 
-    h += '<div class="acc c-1' + (konsOpen.o ? ' open' : '') + '"><div class="acchead" role="button" tabindex="0" aria-expanded="' + konsOpen.o + '" data-act="kacc" data-v="o">' +
-      '<div class="acctop"><span class="wico">' + ico('wallet', 16) + '</span><span class="t1">Operasional</span><span class="chev">' + ico('chev', 18) + '</span></div>' +
-      '<div class="big">' + rp(OR) + ' <small>\u00B7 ' + O.length + ' catatan</small></div>' +
-      (O.length ? barsHtml(sumBy(O, function (r) { return r.kategori || 'Tanpa kategori'; }), false) : '') + '</div>' +
-      '<div class="klist">' + (O.map(function (r) { return kItem(r, false); }).join('') || '<div class="sub">Belum ada catatan.</div>') + '</div></div>';
-    h += '<p class="hint" style="text-align:center;margin:0">Operasional mencakup semua kategori selain Solar.</p>';
-    h += forecastHtml();
     if (!loaded) h = '<div class="empty"><b>Memuat catatan bersama</b>Sebentar, data sedang diambil.</div>';
     $('kBody').innerHTML = h;
   }
 
   /* ---------- Acuan dan perkiraan ---------- */
-  function forecastHtml() {
+  function forecastHtml(M, kendFilter) {
     var head = '<div class="sec-head"><h3>Acuan dan perkiraan</h3><button class="lnk" type="button" data-go="mobil">Atur acuan</button></div>';
-    if (!kons.bulan) return head + '<div class="card"><p class="hint" style="margin:0">Pilih satu bulan di atas untuk melihat acuan dan perkiraan per mobil.</p></div>';
-    var M = kons.bulan, today = todayStr(), cur = today.slice(0, 7);
+    if (!M) return head + '<div class="card"><p class="hint" style="margin:0">Pilih satu bulan di kolom periode atas untuk melihat acuan dan perkiraan per mobil.</p></div>';
+    var today = todayStr(), cur = today.slice(0, 7);
     var D = new Date(Number(M.slice(0, 4)), Number(M.slice(5, 7)), 0).getDate();
     var d = M < cur ? D : (M === cur ? Math.min(D, Number(today.slice(8, 10))) : 0);
     var past = M < cur;
-    var names = kons.kend ? [kons.kend] : VN();
+    var names = kendFilter ? [kendFilter] : VN();
     var out = head;
     names.forEach(function (n) {
       var a = acuanOf(n), P = a.pendapatan, G = a.gaji, budget = P - G;
@@ -1549,6 +1539,13 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
     }
     if (act === 'kacc') { var kv = b.getAttribute('data-v'); konsOpen[kv] = !konsOpen[kv]; renderKonsumsi(); return; }
     if (act === 'kmob') { kons.kend = b.getAttribute('data-v'); renderKonsumsi(); return; }
+    if (act === 'wkat') {
+      filt = { bulan: period, kend: '', kat: b.getAttribute('data-k'), oleh: '', q: '' };
+      $('fCari').value = '';
+      renderRiwayat();
+      setView('riwayat', true);
+      return;
+    }
     if (act === 'wkend') {
       filt = { bulan: period, kend: b.getAttribute('data-k'), kat: '', oleh: '', q: '' };
       $('fCari').value = '';
