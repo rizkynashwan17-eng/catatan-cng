@@ -922,7 +922,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       h += '<div class="stack">' + list.slice(0, 5).map(function (r) { return itemHtml(r, false, true); }).join('') + '</div>';
     }
     h += '<div style="text-align:center"><button class="lnk" type="button" data-act="lock">Kunci aplikasi</button></div>';
-    h += '<p class="hint" style="text-align:center;margin:0">Versi 16 Nov 2026, jam 16.00</p>';
+    h += '<p class="hint" style="text-align:center;margin:0">Versi 16 Nov 2026, jam 16.10</p>';
     $('v-beranda').innerHTML = h;
   }
 
@@ -1190,7 +1190,7 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
       }
       var rest = past ? 0 : un.solar * a.solar + un.ops * a.ops + un.tol * a.tol;
       var Xall = X + gajiRec;
-      var gajiSisa = past ? 0 : Math.max(0, G - gajiRec);
+      var gajiSisa = G;
       var total = Xall + rest + gajiSisa, projSisa = P - total;
       var sisa = P - Xall;
       var pct = P > 0 ? Xall / P * 100 : (Xall > 0 ? 100 : 0);
@@ -1209,13 +1209,13 @@ input::placeholder { color: var(--muted); opacity: 0.85; }
         '<div class="krow"><span>Sudah keluar (tercatat, termasuk gaji)</span><b>' + rp(Xall) + ' <small class="muted">(' + Math.round(pct) + '%)</small></b></div>' +
         '<div class="krow"><span>Sisa dari pendapatan</span><b class="' + (sisa < 0 ? 'neg' : 'pos') + '">' + (sisa < 0 ? '-' : '') + rp(Math.abs(sisa)) + '</b></div>' +
         (restRows ? '<div class="krow sep"><span>Yang belum dikasih (dari Tracker)</span><b>' + rp(rest) + '</b></div>' + restRows : '') +
-        (past ? '' : '<div class="krow' + (restRows ? '' : ' sep') + '"><span>Perkiraan Gaji Sopir <small class="muted">(sisa dari ' + rp(G) + ')</small></span><b>' + rp(gajiSisa) + '</b></div>') +
+        '<div class="krow' + (restRows ? '' : ' sep') + '"><span>' + (past ? 'Gaji sopir' : 'Perkiraan Gaji Sopir') + ' <small class="muted">(' + rp(G / TRIPS) + ' \u00D7 ' + TRIPS + ' trip)</small></span><b>' + rp(gajiSisa) + '</b></div>' +
         '<div class="krow sep"><span>' + (past ? 'Total biaya bulan ini' : 'Perkiraan biaya akhir bulan') + '</span><b>' + rp(total) + '</b></div>' +
         '<div class="krow"><span>' + (past ? 'Sisa setelah biaya' : 'Perkiraan sisa setelah biaya') + '</span><b class="' + (projSisa < 0 ? 'neg' : 'pos') + '">' + (projSisa < 0 ? '-' : '') + rp(Math.abs(projSisa)) + (P > 0 ? ' <small class="muted">(' + Math.round(projSisa / P * 100) + '%)</small>' : '') + '</b></div>' +
         '<div class="krow"><span>Trip selesai</span><b>' + selesai + ' dari ' + TRIPS + '</b></div>' +
         '</div>';
     });
-    out += '<p class="hint" style="margin:0">Perkiraan = biaya yang sudah tercatat + biaya standar per trip yang belum dikasih (centang Solar, Ops, Tol di Tracker) + gaji. Kalau centangnya sudah dipasang, biaya itu tidak dihitung dua kali, jadi centang hanya setelah uangnya dikasih dan dicatat. Gaji sopir yang sudah dicatat ikut dihitung di Sudah keluar, dan perkiraan gaji adalah sisanya dari acuan gaji bulanan di menu Mobil. Pengeluaran Umum tidak dibagi ke mobil.' + (acuanOk ? '' : ' Acuan memakai nilai awal.') + (trkOk ? '' : ' Tracker belum aktif, jadi semua trip dianggap belum dikasih.') + '</p>';
+    out += '<p class="hint" style="margin:0">Perkiraan = biaya yang sudah tercatat + biaya standar per trip yang belum dikasih (centang Solar, Ops, Tol di Tracker) + gaji. Kalau centangnya sudah dipasang, biaya itu tidak dihitung dua kali, jadi centang hanya setelah uangnya dikasih dan dicatat. Gaji yang sudah dicatat dianggap di luar gaji trip dan ikut dihitung di Sudah keluar. Perkiraan Gaji Sopir selalu penuh sesuai acuan gaji bulanan di menu Mobil. Pengeluaran Umum tidak dibagi ke mobil.' + (acuanOk ? '' : ' Acuan memakai nilai awal.') + (trkOk ? '' : ' Tracker belum aktif, jadi semua trip dianggap belum dikasih.') + '</p>';
     return out;
   }
 
